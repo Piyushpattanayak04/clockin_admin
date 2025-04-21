@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "813360610878",
+    "project_id": "clockin-f9343",
+    "storage_bucket": "clockin-f9343.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:813360610878:android:0d8e445c61590f64ab9b6f",
+        "android_client_info": {
+          "package_name": "com.example.clockin_admin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBU9HBc1d__WLsSLBz4lzxk3Dfj4VW9PtE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
