@@ -30,12 +30,16 @@ class LoginScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('Admin Login', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            Text(
+              'Admin Login',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
             SizedBox(height: 40),
             TextField(
               controller: usernameController,
               decoration: InputDecoration(labelText: 'Username'),
             ),
+            SizedBox(height: 16), // 👈 Added spacing between fields
             TextField(
               controller: passwordController,
               decoration: InputDecoration(labelText: 'Password'),
