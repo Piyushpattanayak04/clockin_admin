@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'attendance_screen.dart';
-import '../widgets/scanner_overlay.dart'; // make sure this path matches your project structure
+import '../widgets/scanner_overlay.dart';
 
 class QRScannerScreen extends StatefulWidget {
   final String eventName;
@@ -20,50 +20,47 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
   void handleScan(String code) async {
     if (isProcessing) return;
     setState(() => isProcessing = true);
-
-    // Pause scanning to prevent duplicate reads
     scannerController.stop();
 
-    final snapshot = await FirebaseFirestore.instance
-        .collection('tickets')
-        .where('qrCode', isEqualTo: code)
-        .get();
+    try {
+      final parts = code.split('_');
+      if (parts.length < 4) throw 'Invalid QR format';
+      final eventName = parts[0];
+      final memberName = parts[1];
+      final teamName = parts[2];
+      final collegeName = parts[3];
 
-    if (snapshot.docs.isNotEmpty) {
-      final data = snapshot.docs.first.data();
-      final eventName = data['eventName'];
-      final teamName = data['teamName'];
+      final snapshot = await FirebaseFirestore.instance
+          .collection('tickets')
+          .where('qrCode', isEqualTo: code)
+          .get();
 
-      await FirebaseFirestore.instance
-          .collection('events')
-          .doc(eventName)
-          .collection('teams')
-          .doc(teamName)
-          .set({'checkin': true}, SetOptions(merge: true));
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('✅ Check-in marked for $teamName')),
-      );
+      if (snapshot.docs.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('❌ Ticket not found')),
+        );
+        scannerController.start();
+        return;
+      }
 
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => AttendanceScreen(
             eventName: eventName,
-            code: teamName,
+            teamName: teamName,
+            memberName: memberName,
           ),
         ),
       );
-    } else {
-      if (!mounted) return;
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ Ticket not found')),
+        SnackBar(content: Text('Error: $e')),
       );
-      scannerController.start(); // Resume scanning if ticket not found
+      scannerController.start();
+    } finally {
+      setState(() => isProcessing = false);
     }
-
-    setState(() => isProcessing = false);
   }
 
   @override
@@ -75,9 +72,8 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           MobileScanner(
             controller: scannerController,
             onDetect: (BarcodeCapture capture) {
-              final List<Barcode> barcodes = capture.barcodes;
-              for (final barcode in barcodes) {
-                final String? code = barcode.rawValue;
+              for (final barcode in capture.barcodes) {
+                final code = barcode.rawValue;
                 if (code != null) {
                   handleScan(code);
                   break;
@@ -85,7 +81,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
               }
             },
           ),
-          const ScannerOverlay(), // 👈 your custom overlay
+          const ScannerOverlay(),
         ],
       ),
     );

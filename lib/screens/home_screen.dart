@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'event_screen.dart';
 
 class AdminHomeScreen extends StatelessWidget {
-  final List<String> events = ["Hack-o-Clock", "CodeFest", "Bug Bash"];
+  final List<String> events = ["hack-o-clock"];
 
   AdminHomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Hackathon Hub')),
+      appBar: AppBar(title: const Text('Clockin Admin')),
       body: ListView.builder(
         itemCount: events.length,
         itemBuilder: (context, index) {
