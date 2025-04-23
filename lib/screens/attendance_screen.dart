@@ -6,7 +6,7 @@ class AttendanceScreen extends StatefulWidget {
   final String teamName;
   final String memberName;
 
-  AttendanceScreen({
+  const AttendanceScreen({
     required this.eventName,
     required this.teamName,
     required this.memberName,
@@ -20,7 +20,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Map<String, bool> status = {
     'checkin': false,
     'lunch': false,
+    'snacks': false,
     'dinner': false,
+    'midNi8Snacks': false,
+    'attendance': false,
+    'breakfast': false,
+    'lunch2': false,
     'checkout': false,
   };
 
@@ -47,7 +52,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       setState(() {
         status['checkin'] = data['checkin'] ?? false;
         status['lunch'] = data['lunch'] ?? false;
+        status['snacks'] = data['snacks'] ?? false;
         status['dinner'] = data['dinner'] ?? false;
+        status['midNi8Snacks'] = data['midNi8Snacks'] ?? false;
+        status['attendance'] = data['attendance'] ?? false;
+        status['breakfast'] = data['breakfast'] ?? false;
+        status['lunch2'] = data['lunch2'] ?? false;
         status['checkout'] = data['checkout'] ?? false;
         loading = false;
       });
@@ -81,27 +91,29 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget buildButton(String type, String label) {
-    return SizedBox(
-      width: double.infinity,
-      height: 60,
-      child: ElevatedButton.icon(
-        onPressed: () => markAttendance(type),
-        icon: Icon(
-          status[type]! ? Icons.check_circle : Icons.qr_code_scanner,
-          color: status[type]! ? Colors.green : null,
-          size: 28,
-        ),
-        label: Text(
-          status[type]! ? "$label ✅" : label,
-          style: const TextStyle(fontSize: 20),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: status[type]! ? Colors.grey.shade800 : null,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: SizedBox(
+        width: double.infinity,
+        height: 45,
+        child: ElevatedButton.icon(
+          onPressed: () => markAttendance(type),
+          icon: Icon(
+            status[type]! ? Icons.check_circle : Icons.qr_code_scanner,
+            color: status[type]! ? Colors.green : null,
+            size: 20,
+          ),
+          label: Text(
+            status[type]! ? "$label ✅" : label,
+            style: const TextStyle(fontSize: 16),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: status[type]! ? Colors.grey.shade800 : null,
+          ),
         ),
       ),
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -116,43 +128,41 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         title: Text('${widget.memberName} - Attendance'),
       ),
       body: Center(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  'Name: ${widget.memberName}',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Text(
+                'Name: ${widget.memberName}',
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Team: ${widget.teamName}',
+                style: const TextStyle(fontSize: 18, color: Colors.grey),
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    buildButton('checkin', 'Check-in'),
+                    buildButton('lunch', 'Lunch'),
+                    buildButton('snacks', 'Snacks'),
+                    buildButton('dinner', 'Dinner'),
+                    buildButton('midNi8Snacks', 'Midnight Snacks'),
+                    buildButton('attendance', 'Night Attendance'),
+                    buildButton('breakfast', 'Breakfast'),
+                    buildButton('lunch2', 'Lunch II'),
+                    buildButton('checkout', 'Check-out'),
+                  ],
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  'Team: ${widget.teamName}',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    color: Colors.grey,
-                  ),
-                ),
-                const SizedBox(height: 40),
-                buildButton('checkin', 'Check-in'),
-                const SizedBox(height: 20),
-                buildButton('lunch', 'Lunch'),
-                const SizedBox(height: 20),
-                buildButton('dinner', 'Dinner'),
-                const SizedBox(height: 20),
-                buildButton('checkout', 'Checkout'),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
-
 }
-

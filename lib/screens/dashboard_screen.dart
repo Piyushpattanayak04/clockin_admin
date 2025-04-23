@@ -96,15 +96,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               Text("$memberName - $teamName",
                                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                               const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  _buildStatusIndicator("Check-in", data['checkin'] ?? false),
-                                  _buildStatusIndicator("Lunch", data['lunch'] ?? false),
-                                  _buildStatusIndicator("Dinner", data['dinner'] ?? false),
-                                  _buildStatusIndicator("Checkout", data['checkout'] ?? false),
-                                ],
-                              )
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children: [
+                                    _buildStatusIndicator("Check-in", data['checkin'] ?? false),
+                                    _buildStatusIndicator("Lunch", data['lunch'] ?? false),
+                                    _buildStatusIndicator("Snacks", data['snacks'] ?? false),
+                                    _buildStatusIndicator("Dinner", data['dinner'] ?? false),
+                                    _buildStatusIndicator("Midnight Snacks", data['midNi8Snacks'] ?? false),
+                                    _buildStatusIndicator("Attendance", data['attendance'] ?? false),
+                                    _buildStatusIndicator("Breakfast", data['breakfast'] ?? false),
+                                    _buildStatusIndicator("Lunch II", data['lunch2'] ?? false),
+                                    _buildStatusIndicator("Checkout", data['checkout'] ?? false),
+                                  ].map((widget) => Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                    child: widget,
+                                  )).toList(),
+                                ),
+                              ),
+
                             ],
                           ),
                         ),

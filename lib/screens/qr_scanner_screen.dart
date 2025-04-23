@@ -85,9 +85,14 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         // Create member attendance fields
         await attendanceMemberRef.set({
           'checkin': false,
-          'checkout': false,
           'lunch': false,
+          'snacks': false,
           'dinner': false,
+          'midNi8Snacks': false,
+          'attendance': false,
+          'breakfast': false,
+          'lunch2': false,
+          'checkout': false,
         });
       }
 
