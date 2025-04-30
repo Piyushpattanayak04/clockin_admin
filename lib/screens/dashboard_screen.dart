@@ -3,149 +3,181 @@ import 'package:flutter/material.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String eventName;
-  const DashboardScreen({required this.eventName});
+
+  const DashboardScreen({super.key, required this.eventName});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  String? selectedTeam; // filter by team
-
-  Color getColor(bool status) => status ? Colors.green : Colors.red;
+  String? selectedTeam;
+  List<String> teams = [];
+  bool isLoading = true;
+  List<Map<String, dynamic>> members = [];
 
   @override
-  Widget build(BuildContext context) {
-    final teamsRef = FirebaseFirestore.instance
+  void initState() {
+    super.initState();
+    _loadTeams();
+  }
+
+  Future<void> _loadTeams() async {
+    final snapshot = await FirebaseFirestore.instance
         .collection('events')
         .doc(widget.eventName)
-        .collection('teams');
+        .collection('teams')
+        .get();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.eventName} Dashboard'),
-        actions: [
-          StreamBuilder<QuerySnapshot>(
-            stream: teamsRef.snapshots(),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) return const SizedBox();
+    final teamNames = snapshot.docs.map((doc) => doc.id).toList();
 
-              final teamNames = snapshot.data!.docs.map((doc) => doc.id).toList()
-                ..sort();
+    setState(() {
+      teams = teamNames;
+      selectedTeam = null;
+    });
 
-              return DropdownButton<String>(
-                value: selectedTeam,
-                hint: Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: Text("Filter by team", style: const TextStyle(color: Colors.white)),
-                ),
-                dropdownColor: Colors.grey[900],
-                underline: const SizedBox(),
-                onChanged: (value) => setState(() => selectedTeam = value == 'ALL_TEAMS' ? null : value),
-                items: [
-                  const DropdownMenuItem(
-                    value: 'ALL_TEAMS',
-                    child: Text("All teams"),
-                  ),
-                  ...teamNames.map((name) => DropdownMenuItem(
-                    value: name,
-                    child: Text(name),
-                  )),
-                ],
-              );
-            },
-          )
-        ],
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: teamsRef.snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-          final teamDocs = snapshot.data!.docs;
+    await _loadMembers(); // Load all members initially
+  }
 
-          List<Widget> memberCards = [];
+  Future<void> _loadMembers() async {
+    setState(() {
+      isLoading = true;
+      members = [];
+    });
 
-          for (var teamDoc in teamDocs) {
-            final teamName = teamDoc.id;
-            if (selectedTeam != null && teamName != selectedTeam) continue;
+    final teamList = selectedTeam != null ? [selectedTeam!] : teams;
 
-            final membersRef = teamsRef.doc(teamName).collection('members');
+    // Use parallel fetching
+    final List<Future<void>> fetchTasks = teamList.map((team) async {
+      final membersSnapshot = await FirebaseFirestore.instance
+          .collection('events')
+          .doc(widget.eventName)
+          .collection('teams')
+          .doc(team)
+          .collection('members')
+          .get();
 
-            memberCards.add(
-              StreamBuilder<QuerySnapshot>(
-                stream: membersRef.orderBy(FieldPath.documentId).snapshots(),
-                builder: (context, memberSnapshot) {
-                  if (!memberSnapshot.hasData) return const SizedBox();
+      final List<Map<String, dynamic>> teamMembers = membersSnapshot.docs.map((doc) {
+        final data = doc.data();
+        data.remove('memberName'); // ensure consistency
+        return {
+          'memberName': doc.id,
+          'teamName': team,
+          'subEvents': data,
+        };
+      }).toList();
 
-                  final members = memberSnapshot.data!.docs;
+      members.addAll(teamMembers);
+    }).toList();
 
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: members.map((memberDoc) {
-                      final data = memberDoc.data() as Map<String, dynamic>;
-                      final memberName = memberDoc.id;
+    await Future.wait(fetchTasks);
 
-                      return Card(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text("$memberName - $teamName",
-                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 8),
-                              SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Row(
-                                  children: [
-                                    _buildStatusIndicator("Check-in", data['checkin'] ?? false),
-                                    _buildStatusIndicator("Lunch", data['lunch'] ?? false),
-                                    _buildStatusIndicator("Snacks", data['snacks'] ?? false),
-                                    _buildStatusIndicator("Dinner", data['dinner'] ?? false),
-                                    _buildStatusIndicator("Midnight Snacks", data['midNi8Snacks'] ?? false),
-                                    _buildStatusIndicator("Attendance", data['attendance'] ?? false),
-                                    _buildStatusIndicator("Breakfast", data['breakfast'] ?? false),
-                                    _buildStatusIndicator("Lunch II", data['lunch2'] ?? false),
-                                    _buildStatusIndicator("Checkout", data['checkout'] ?? false),
-                                  ].map((widget) => Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                                    child: widget,
-                                  )).toList(),
-                                ),
-                              ),
+    setState(() {
+      isLoading = false;
+    });
+  }
 
-                            ],
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  );
-                },
-              ),
-            );
-          }
-
-          return ListView(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            children: memberCards,
-          );
-        },
+  Widget _buildStatusCircle(bool status) {
+    return Container(
+      width: 16,
+      height: 16,
+      margin: const EdgeInsets.only(right: 4),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: status ? Colors.green : Colors.red,
       ),
     );
   }
 
-  Widget _buildStatusIndicator(String label, bool status) {
-    return Column(
-      children: [
-        CircleAvatar(
-          backgroundColor: getColor(status),
-          radius: 10,
+  Widget _buildMemberCard(Map<String, dynamic> member) {
+    final subEvents = member['subEvents'] as Map<String, dynamic>;
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(member['memberName'],
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('Team: ${member['teamName']}'),
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: subEvents.entries.map((e) {
+                  return Container(
+                    margin: const EdgeInsets.only(right: 12),
+                    child: Row(
+                      children: [
+                        _buildStatusCircle(e.value == true),
+                        Text(e.key),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(fontSize: 12)),
-      ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Dashboard: ${widget.eventName}')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // Team Filter Dropdown
+            Row(
+              children: [
+                const Text('Filter by Team:'),
+                const SizedBox(width: 12),
+                DropdownButton<String>(
+                  value: selectedTeam,
+                  hint: const Text('All Teams'),
+                  items: [
+                    const DropdownMenuItem<String>(
+                      value: null,
+                      child: Text('All Teams'),
+                    ),
+                    ...teams.map(
+                          (team) => DropdownMenuItem(
+                        value: team,
+                        child: Text(team),
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) async {
+                    setState(() {
+                      selectedTeam = value;
+                    });
+                    await _loadMembers();
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            isLoading
+                ? const Expanded(child: Center(child: CircularProgressIndicator()))
+                : Expanded(
+              child: members.isEmpty
+                  ? const Center(child: Text('No members found.'))
+                  : ListView.builder(
+                itemCount: members.length,
+                itemBuilder: (context, index) =>
+                    _buildMemberCard(members[index]),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

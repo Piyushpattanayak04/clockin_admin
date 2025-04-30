@@ -3,10 +3,10 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'themes/dark_theme.dart';
 import 'screens/login_screen.dart';
-import 'screens/home_screen.dart'; // AdminHomeScreen
-import 'screens/event_screen.dart'; // EventSelectionScreen
-import 'screens/dashboard_screen.dart'; // DashboardScreen
-import 'screens/qr_scanner_screen.dart'; // QRScannerScreen
+import 'screens/home_screen.dart';
+import 'screens/event_screen.dart';  // Import the renamed EventScreen
+import 'screens/dashboard_screen.dart';
+import 'screens/qr_scanner_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,22 +31,26 @@ class MyApp extends StatelessWidget {
           case '/login':
             return MaterialPageRoute(builder: (_) => LoginScreen());
           case '/home':
-            return MaterialPageRoute(builder: (_) => AdminHomeScreen());
-          case '/events':
+            return MaterialPageRoute(builder: (_) => const HomeScreen());
+          case '/eventScreen':
+            final eventName = settings.arguments as String;
             return MaterialPageRoute(
-                builder: (_) => EventSelectionScreen(eventName: ''));
+              builder: (_) => EventScreen(eventName: eventName),  // Navigate to EventScreen directly
+            );
           case '/dashboard':
             final eventName = settings.arguments as String;
             return MaterialPageRoute(
-                builder: (_) => DashboardScreen(eventName: eventName));
+              builder: (_) => DashboardScreen(eventName: eventName),
+            );
           case '/scanner':
-            final eventName = settings.arguments as String;
             return MaterialPageRoute(
-                builder: (_) => QRScannerScreen(eventName: eventName));
+              builder: (_) => const QRScannerScreen(eventName: ''),
+            );
           default:
             return MaterialPageRoute(
               builder: (_) => Scaffold(
-                  body: Center(child: Text('No route defined for ${settings.name}'))),
+                body: Center(child: Text('No route defined for ${settings.name}')),
+              ),
             );
         }
       },

@@ -1,31 +1,55 @@
 import 'package:flutter/material.dart';
+import 'dashboard_screen.dart';
+import 'manage_event_screen.dart';
 
-class EventSelectionScreen extends StatelessWidget {
+class EventScreen extends StatelessWidget {
   final String eventName;
 
-  const EventSelectionScreen({super.key, required this.eventName});
+  const EventScreen({super.key, required this.eventName});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(eventName)),
+      appBar: AppBar(
+        title: Text('Event: $eventName'),
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ElevatedButton(
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
               onPressed: () {
-                Navigator.pushNamed(context, '/dashboard', arguments: eventName);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => DashboardScreen(eventName: eventName),
+                  ),
+                );
               },
-              child: const Text('Dashboard'),
+              icon: const Icon(Icons.dashboard),
+              label: const Text('Dashboard'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 18),
+              ),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
               onPressed: () {
-                Navigator.pushNamed(context, '/scanner', arguments: eventName);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ManageEventScreen(eventName: eventName),
+                  ),
+                );
               },
-              child: const Text('QR Scanner'),
+              icon: const Icon(Icons.edit),
+              label: const Text('Manage Event'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepOrange,
+                padding: const EdgeInsets.symmetric(vertical: 18),
+              ),
             ),
           ],
         ),

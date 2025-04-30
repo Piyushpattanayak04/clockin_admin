@@ -17,28 +17,25 @@ class AttendanceScreen extends StatefulWidget {
 }
 
 class _AttendanceScreenState extends State<AttendanceScreen> {
-  Map<String, bool> status = {
-    'checkin': false,
-    'lunch': false,
-    'snacks': false,
-    'dinner': false,
-    'midNi8Snacks': false,
-    'attendance': false,
-    'breakfast': false,
-    'lunch2': false,
-    'checkout': false,
-  };
-
+  List<String> subevents = [];
+  Map<String, bool> status = {};
   bool loading = true;
 
   @override
   void initState() {
     super.initState();
-    fetchStatus();
+    fetchData();
   }
 
-  Future<void> fetchStatus() async {
-    final doc = await FirebaseFirestore.instance
+  Future<void> fetchData() async {
+    // Fetch from skeleton
+    final skeletonDoc = await FirebaseFirestore.instance
+        .collection('skeleton')
+        .doc(widget.eventName)
+        .get();
+
+    // Fetch member
+    final memberDoc = await FirebaseFirestore.instance
         .collection('events')
         .doc(widget.eventName)
         .collection('teams')
@@ -47,27 +44,32 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         .doc(widget.memberName)
         .get();
 
-    if (doc.exists) {
-      final data = doc.data()!;
+    if (skeletonDoc.exists && memberDoc.exists) {
+      final subeventList = List<String>.from(skeletonDoc.data()?['subEvents'] ?? []);
+      final memberData = memberDoc.data()!;
+
+      final fetchedStatus = <String, bool>{};
+      for (final sub in subeventList) {
+        fetchedStatus[sub] = memberData[sub] ?? false;
+      }
+
       setState(() {
-        status['checkin'] = data['checkin'] ?? false;
-        status['lunch'] = data['lunch'] ?? false;
-        status['snacks'] = data['snacks'] ?? false;
-        status['dinner'] = data['dinner'] ?? false;
-        status['midNi8Snacks'] = data['midNi8Snacks'] ?? false;
-        status['attendance'] = data['attendance'] ?? false;
-        status['breakfast'] = data['breakfast'] ?? false;
-        status['lunch2'] = data['lunch2'] ?? false;
-        status['checkout'] = data['checkout'] ?? false;
+        subevents = subeventList;
+        status = fetchedStatus;
         loading = false;
       });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not load data.')),
+      );
+      Navigator.pop(context);
     }
   }
 
-  Future<void> markAttendance(String type) async {
-    if (status[type] == true) {
+  Future<void> markAttendance(String subevent) async {
+    if (status[subevent] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('⚠️ Already marked $type')),
+        SnackBar(content: Text('⚠️ Already marked $subevent')),
       );
       return;
     }
@@ -79,36 +81,37 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         .doc(widget.teamName)
         .collection('members')
         .doc(widget.memberName)
-        .set({type: true}, SetOptions(merge: true));
+        .set({subevent: true}, SetOptions(merge: true));
 
     setState(() {
-      status[type] = true;
+      status[subevent] = true;
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('✅ $type marked')),
+      SnackBar(content: Text('✅ $subevent marked')),
     );
   }
 
-  Widget buildButton(String type, String label) {
+  Widget buildButton(String subevent) {
+    final attended = status[subevent] == true;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: SizedBox(
         width: double.infinity,
         height: 45,
         child: ElevatedButton.icon(
-          onPressed: () => markAttendance(type),
+          onPressed: () => markAttendance(subevent),
           icon: Icon(
-            status[type]! ? Icons.check_circle : Icons.qr_code_scanner,
-            color: status[type]! ? Colors.green : null,
+            attended ? Icons.check_circle : Icons.qr_code_scanner,
+            color: attended ? Colors.green : null,
             size: 20,
           ),
           label: Text(
-            status[type]! ? "$label ✅" : label,
+            attended ? "${_capitalize(subevent)} ✅" : _capitalize(subevent),
             style: const TextStyle(fontSize: 16),
           ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: status[type]! ? Colors.grey.shade800 : null,
+            backgroundColor: attended ? Colors.grey.shade800 : null,
           ),
         ),
       ),
@@ -118,20 +121,19 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
       appBar: AppBar(
         title: Text('${widget.memberName} - Attendance'),
       ),
-      body: Center(
-        child: Padding(
+      body: Scrollbar(
+        thumbVisibility: true,
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
                 'Name: ${widget.memberName}',
@@ -143,26 +145,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 style: const TextStyle(fontSize: 18, color: Colors.grey),
               ),
               const SizedBox(height: 20),
-              Expanded(
-                child: ListView(
-                  padding: EdgeInsets.zero,
-                  children: [
-                    buildButton('checkin', 'Check-in'),
-                    buildButton('lunch', 'Lunch'),
-                    buildButton('snacks', 'Snacks'),
-                    buildButton('dinner', 'Dinner'),
-                    buildButton('midNi8Snacks', 'Midnight Snacks'),
-                    buildButton('attendance', 'Night Attendance'),
-                    buildButton('breakfast', 'Breakfast'),
-                    buildButton('lunch2', 'Lunch II'),
-                    buildButton('checkout', 'Check-out'),
-                  ],
-                ),
-              ),
+              ...subevents.map(buildButton).toList(),
             ],
           ),
         ),
       ),
     );
   }
+
+  String _capitalize(String s) =>
+      s.isNotEmpty ? s[0].toUpperCase() + s.substring(1) : s;
 }

@@ -31,34 +31,17 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       final teamName = parts[2];
       final collegeName = parts[3];
 
-      final memberDoc = await FirebaseFirestore.instance
-          .collection('tickets')
+      final skeletonDoc = await FirebaseFirestore.instance
+          .collection('skeleton')
           .doc(eventName)
-          .collection('teams')
-          .doc(teamName)
-          .collection('members')
-          .doc(memberName)
           .get();
 
-      if (!memberDoc.exists) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('❌ Ticket not found')),
-        );
-        scannerController.start();
-        return;
-      }
+      if (!skeletonDoc.exists) throw 'Event not registered in skeleton.';
 
-      final data = memberDoc.data();
-      if (data == null || data['qrCode'] != code) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('❌ Ticket mismatch')),
-        );
-        scannerController.start();
-        return;
-      }
+      final subEvents = List<String>.from(skeletonDoc.data()?['subEvents'] ?? []);
+      if (subEvents.isEmpty) throw 'No sub-events found for this event.';
 
-      // Create attendance structure if it doesn't exist
-      final attendanceMemberRef = FirebaseFirestore.instance
+      final memberRef = FirebaseFirestore.instance
           .collection('events')
           .doc(eventName)
           .collection('teams')
@@ -66,15 +49,14 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           .collection('members')
           .doc(memberName);
 
-      final attendanceDoc = await attendanceMemberRef.get();
-      if (!attendanceDoc.exists) {
-        // Create event document with field
+      final memberDoc = await memberRef.get();
+
+      if (!memberDoc.exists) {
         await FirebaseFirestore.instance
             .collection('events')
             .doc(eventName)
             .set({'eventName': eventName}, SetOptions(merge: true));
 
-        // Create team document with field
         await FirebaseFirestore.instance
             .collection('events')
             .doc(eventName)
@@ -82,22 +64,14 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             .doc(teamName)
             .set({'teamName': teamName}, SetOptions(merge: true));
 
-        // Create member attendance fields
-        await attendanceMemberRef.set({
-          'checkin': false,
-          'lunch': false,
-          'snacks': false,
-          'dinner': false,
-          'midNi8Snacks': false,
-          'attendance': false,
-          'breakfast': false,
-          'lunch2': false,
-          'checkout': false,
-        });
+        final memberData = {
+          for (var sub in subEvents) sub: false,
+          'collegeName': collegeName,
+        };
+        await memberRef.set(memberData);
       }
 
-      // Go to attendance screen
-      Navigator.push(
+      await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => AttendanceScreen(
@@ -107,10 +81,10 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           ),
         ),
       );
+
+      scannerController.start();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       scannerController.start();
     } finally {
       setState(() => isProcessing = false);
@@ -118,10 +92,17 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
   }
 
   @override
+  void dispose() {
+    scannerController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Scan QR - ${widget.eventName}')),
-      body: Stack(
+    return WillPopScope(
+      // Prevent navigating back from QR screen
+      onWillPop: () async => false,
+      child: Stack(
         children: [
           MobileScanner(
             controller: scannerController,

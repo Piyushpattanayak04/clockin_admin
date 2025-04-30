@@ -12,7 +12,7 @@ class LoginScreen extends StatelessWidget {
     if (AuthService.login(username, password)) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => AdminHomeScreen()),
+        MaterialPageRoute(builder: (_) => HomeScreen()),
 
       );
     } else {
