@@ -15,6 +15,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   final TextEditingController _subEventController = TextEditingController();
   final List<String> subEvents = [];
   bool isProcessing = false;
+  bool _isTeamBasedEvent = false; // New state variable for the checkbox
 
   // Event creation function
   Future<void> createEvent() async {
@@ -34,9 +35,12 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
       });
 
       final eventDoc = FirebaseFirestore.instance.collection('skeleton').doc(eventName);
+
+      // Modified: Added 'isTeamBasedEvent' to the data being sent
       await eventDoc.set({
         'eventName': eventName,
         'subEvents': subEvents,
+        'isTeamBasedEvent': _isTeamBasedEvent, // Storing the checkbox value
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -91,7 +95,22 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
               controller: _eventNameController,
               decoration: const InputDecoration(labelText: 'Event Name'),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 10), // Adjusted spacing
+
+            // New: CheckboxListTile for team-based events
+            CheckboxListTile(
+              title: const Text("Team-based Event"),
+              value: _isTeamBasedEvent,
+              onChanged: (newValue) {
+                setState(() {
+                  _isTeamBasedEvent = newValue!;
+                });
+              },
+              controlAffinity: ListTileControlAffinity.leading, // Puts checkbox first
+              contentPadding: EdgeInsets.zero, // Removes extra padding
+            ),
+
+            const SizedBox(height: 10),
             TextField(
               controller: _subEventController,
               decoration: InputDecoration(
@@ -119,9 +138,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
             ),
             const Spacer(),
             ElevatedButton(
-              onPressed: isProcessing ? null : createEvent,  // Disable when processing
+              onPressed: isProcessing ? null : createEvent,
               child: isProcessing
-                  ? const CircularProgressIndicator()  // Show loading indicator
+                  ? const CircularProgressIndicator()
                   : const Center(child: Text('Create Event')),
             ),
           ],
