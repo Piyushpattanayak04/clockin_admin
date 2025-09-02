@@ -22,7 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadEvents() async {
-    final snapshot = await FirebaseFirestore.instance.collection('events').get();
+    final snapshot = await FirebaseFirestore.instance.collection('skeleton').get();
     setState(() {
       _events = snapshot.docs.map((doc) => doc.id).toList();
     });
@@ -42,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     if (confirmed == true) {
-      await FirebaseFirestore.instance.collection('events').doc(eventName).delete();
+      await FirebaseFirestore.instance.collection('skeleton').doc(eventName).delete();
       await _loadEvents();
     }
   }
